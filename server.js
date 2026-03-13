@@ -7,18 +7,16 @@ dotenv.config();
 
 const app = express();
 
-// Allow requests from your website
 app.use(cors({
   origin: [
     "https://www.bodymechanicsgb.com",
     "https://bodymechanicsgb.com"
-  ]
+  ],
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"]
 }));
 
 app.use(express.json());
-
-// Handle preflight requests
-app.options("*", cors());
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -44,8 +42,11 @@ app.get("/", (req, res) => {
 
 app.post("/chat", async (req, res) => {
   try {
-
     const { message, history = [] } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ reply: "Message is required." });
+    }
 
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
@@ -59,15 +60,11 @@ app.post("/chat", async (req, res) => {
     res.json({
       reply: response.output_text || "Sorry, I couldn't generate a reply."
     });
-
   } catch (error) {
-
-    console.error(error);
-
+    console.error("OpenAI error:", error?.message || error);
     res.status(500).json({
       reply: "Sorry, I’m having trouble right now. Please contact the team directly."
     });
-
   }
 });
 
