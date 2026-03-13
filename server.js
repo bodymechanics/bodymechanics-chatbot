@@ -60,11 +60,15 @@ app.post("/chat", async (req, res) => {
     res.json({
       reply: response.output_text || "Sorry, I couldn't generate a reply."
     });
+
   } catch (error) {
-    console.error("OpenAI error:", error?.message || error);
+
+    console.error(error);
+
     res.status(500).json({
       reply: "Sorry, I’m having trouble right now. Please contact the team directly."
     });
+
   }
 });
 
