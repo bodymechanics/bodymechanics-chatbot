@@ -13,20 +13,11 @@ const corsOptions = {
     "https://bodymechanicsgb.com"
   ],
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"],
-  optionsSuccessStatus: 200
+  allowedHeaders: ["Content-Type"]
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("Body Mechanics chatbot server running.");
-});
-
-app.options("/chat", cors(corsOptions), (req, res) => {
-  res.sendStatus(200);
-});
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -46,13 +37,14 @@ Your role:
 - Never diagnose medical conditions
 `;
 
-app.post("/chat", cors(corsOptions), async (req, res) => {
-  try {
-    const { message, history = [] } = req.body;
+app.get("/", (req, res) => {
+  res.send("Body Mechanics chatbot server running.");
+});
 
-    if (!message) {
-      return res.status(400).json({ reply: "Message is required." });
-    }
+app.post("/chat", async (req, res) => {
+  try {
+
+    const { message, history = [] } = req.body;
 
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
@@ -63,17 +55,23 @@ app.post("/chat", cors(corsOptions), async (req, res) => {
       ]
     });
 
-    const reply = response.output_text || "Sorry, I couldn't generate a reply.";
-    res.json({ reply });
+    res.json({
+      reply: response.output_text || "Sorry, I couldn't generate a reply."
+    });
+
   } catch (error) {
-    console.error("OpenAI error:", error?.message || error);
+
+    console.error(error);
+
     res.status(500).json({
       reply: "Sorry, I’m having trouble right now. Please contact the team directly."
     });
+
   }
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
