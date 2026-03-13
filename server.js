@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 
@@ -6,30 +7,18 @@ dotenv.config();
 
 const app = express();
 
-const allowedOrigins = [
-  "https://www.bodymechanicsgb.com",
-  "https://bodymechanicsgb.com"
-];
-
-// CORS middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-  }
-
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
+// Allow requests from your website
+app.use(cors({
+  origin: [
+    "https://www.bodymechanicsgb.com",
+    "https://bodymechanicsgb.com"
+  ]
+}));
 
 app.use(express.json());
+
+// Handle preflight requests
+app.options("*", cors());
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -55,13 +44,8 @@ app.get("/", (req, res) => {
 
 app.post("/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
 
-    if (!message) {
-      return res.status(400).json({
-        reply: "Message is required."
-      });
-    }
+    const { message, history = [] } = req.body;
 
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
@@ -72,16 +56,18 @@ app.post("/chat", async (req, res) => {
       ]
     });
 
-    const reply =
-      response.output_text || "Sorry, I couldn't generate a reply.";
+    res.json({
+      reply: response.output_text || "Sorry, I couldn't generate a reply."
+    });
 
-    return res.json({ reply });
   } catch (error) {
-    console.error("OpenAI error:", error?.message || error);
 
-    return res.status(500).json({
+    console.error(error);
+
+    res.status(500).json({
       reply: "Sorry, I’m having trouble right now. Please contact the team directly."
     });
+
   }
 });
 
