@@ -16,8 +16,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type"]
 }));
 
-app.options("*", cors());
-
 app.use(express.json());
 
 const client = new OpenAI({
@@ -38,12 +36,16 @@ Your role:
 - Never diagnose medical conditions
 `;
 
+app.get("/", (req, res) => {
+  res.send("Body Mechanics chatbot server running.");
+});
+
 app.post("/chat", async (req, res) => {
   try {
     const { message, history = [] } = req.body;
 
     if (!message) {
-      return res.status(400).json({ error: "Message is required." });
+      return res.status(400).json({ reply: "Message is required." });
     }
 
     const response = await client.responses.create({
@@ -65,10 +67,7 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Body Mechanics chatbot server running.");
-});
-
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running on port 3000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
