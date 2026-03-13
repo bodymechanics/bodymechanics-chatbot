@@ -7,34 +7,12 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-  origin: [
-    "https://www.bodymechanicsgb.com",
-    "https://bodymechanicsgb.com"
-  ],
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
-}));
-
+app.use(cors());
 app.use(express.json());
 
-const client = new OpenAI({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const SYSTEM_PROMPT = `
-You are the website assistant for Body Mechanics.
-
-Body Mechanics is a premium gym and sports therapy facility in Bridgwater.
-Mission: Helping people relieve pain and reach their potential.
-
-Your role:
-- Help visitors understand memberships, classes, and treatments
-- Encourage free trial signups for gym enquiries
-- Encourage treatment bookings for pain, injury, and rehab enquiries
-- Be warm, clear, and concise
-- Never diagnose medical conditions
-`;
 
 app.get("/", (req, res) => {
   res.send("Body Mechanics chatbot server running.");
@@ -42,38 +20,36 @@ app.get("/", (req, res) => {
 
 app.post("/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message, history } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ reply: "Message is required." });
-    }
+    const messages = [
+      {
+        role: "system",
+        content:
+          "You are the Body Mechanics assistant. Help users learn about memberships, classes, treatments, and free trials.",
+      },
+      ...(history || []),
+      { role: "user", content: message },
+    ];
 
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...history,
-        { role: "user", content: message }
-      ]
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
     });
 
-    res.json({
-      reply: response.output_text || "Sorry, I couldn't generate a reply."
-    });
+    const reply = completion.choices[0].message.content;
 
+    res.json({ reply });
   } catch (error) {
-
-    console.error(error);
-
+    console.error("OpenAI error:", error);
     res.status(500).json({
-      reply: "Sorry, I’m having trouble right now. Please contact the team directly."
+      reply: "Sorry, I'm having trouble right now. Please contact the team.",
     });
-
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
