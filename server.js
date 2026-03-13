@@ -7,16 +7,35 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import OpenAI from "openai";
+
+dotenv.config();
+
+const app = express();
+
+const corsOptions = {
   origin: [
     "https://www.bodymechanicsgb.com",
     "https://bodymechanicsgb.com"
   ],
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
-}));
+  allowedHeaders: ["Content-Type"],
+  optionsSuccessStatus: 200
+};
 
+app.use(cors(corsOptions));
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.send("Body Mechanics chatbot server running.");
+});
+
+app.options("/chat", cors(corsOptions), (req, res) => {
+  res.sendStatus(200);
+});
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -36,11 +55,7 @@ Your role:
 - Never diagnose medical conditions
 `;
 
-app.get("/", (req, res) => {
-  res.send("Body Mechanics chatbot server running.");
-});
-
-app.post("/chat", async (req, res) => {
+app.post("/chat", cors(corsOptions), async (req, res) => {
   try {
     const { message, history = [] } = req.body;
 
