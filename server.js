@@ -35,7 +35,8 @@ const client = new OpenAI({
 });
 
 const LINKS = {
-  freeTrial: "https://www.bodymechanicsgb.com/free-trial",
+  freeTrial: "https://www.bodymechanicsgb.com/freetrial",
+  signup: "https://www.bodymechanicsgb.com/signup",
   booking: "https://www.bodymechanicsgb.com/booking",
   memberships: "https://www.bodymechanicsgb.com",
   classes: "https://www.bodymechanicsgb.com"
@@ -75,6 +76,7 @@ Body Mechanics core services:
 - Coach-led classes
 - Sports therapy
 - Free 7-day gym trial
+- Direct gym signup
 
 Membership guidance:
 - Titan = open gym access
@@ -86,6 +88,7 @@ How to explain memberships:
 - Apex is best for people who mainly want structured coach-led classes
 - Olympic is best for people who want both gym access and classes
 - If someone is unsure, recommend the free 7-day trial as the best way to experience Body Mechanics properly
+- If someone is ready to commit, offer direct signup
 
 Classes:
 Body Mechanics currently offers these class types:
@@ -127,6 +130,8 @@ How to explain classes:
 - For Hybrid, explain that it blends weights and cardio in a Hyrox-style format
 - For Crank, explain that it is the spin class and is led by a dedicated spin instructor
 - For Legs, Bums & Tums, explain that it focuses on lower body and core and changes each session
+- When someone asks about classes or joining, mention that members use the BM Portal app to book classes and check in
+- The BM Portal app is available on both the App Store and Google Play
 
 Sports therapy:
 Body Mechanics supports clients with:
@@ -202,7 +207,7 @@ function detectPageContext(pageContext = "") {
 
   if (text.includes("class")) return "classes";
   if (text.includes("therapy") || text.includes("treatment") || text.includes("injury")) return "therapy";
-  if (text.includes("membership") || text.includes("gym") || text.includes("free-trial")) return "gym";
+  if (text.includes("membership") || text.includes("gym") || text.includes("free") || text.includes("signup")) return "gym";
 
   return "general";
 }
@@ -270,12 +275,14 @@ function isClassIntent(text) {
 function isGymIntent(text) {
   return includesAny(text, [
     "join the gym",
-    "membership",
-    "memberships",
-    "gym membership",
-    "free trial",
     "want to join",
-    "join body mechanics"
+    "join body mechanics",
+    "sign up",
+    "signup",
+    "join now",
+    "become a member",
+    "start the gym",
+    "free trial"
   ]);
 }
 
@@ -286,7 +293,8 @@ function isMembershipChoiceIntent(text) {
     "best membership",
     "membership options",
     "tell me about memberships",
-    "explore memberships"
+    "explore memberships",
+    "membership"
   ]);
 }
 
@@ -363,6 +371,16 @@ function isStrengthIntent(text) {
   ]);
 }
 
+function isAppIntent(text) {
+  return includesAny(text, [
+    "app",
+    "bm portal",
+    "portal app",
+    "how do i book classes",
+    "how do i check in"
+  ]);
+}
+
 app.get("/", (req, res) => {
   res.status(200).send("Body Mechanics chatbot server running.");
 });
@@ -385,15 +403,14 @@ app.post("/chat", async (req, res) => {
     const lowerMessage = normalise(message);
     const context = detectPageContext(pageContext);
 
-    // Specific class routing
-
     if (isSculptIntent(lowerMessage)) {
       return res.status(200).json(
         createResponse(
           "Sculpt is our strength and conditioning class and runs in structured 4-week blocks so members can progress properly.\n\nThe weekly format is:\n- Monday – Push\n- Tuesday – Legs\n- Wednesday – Pull\n- Thursday – Upper\n- Friday – Lower\n- Saturday – Full Body\n\nThere are no Sculpt sessions on Sundays.",
           [
             { label: "Explore Memberships", message: "Tell me about memberships" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -405,7 +422,8 @@ app.post("/chat", async (req, res) => {
           "Burn is our cardio-focused class.\n\nThe session changes every day, so workouts stay varied while still pushing conditioning and fitness.",
           [
             { label: "Explore Memberships", message: "Tell me about memberships" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -417,7 +435,8 @@ app.post("/chat", async (req, res) => {
           "Hybrid combines weights and cardio, and is our version of Hyrox-style training.\n\nIt’s a strong option for people who want both strength and conditioning in the same session.",
           [
             { label: "Explore Memberships", message: "Tell me about memberships" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -429,7 +448,8 @@ app.post("/chat", async (req, res) => {
           "Crank is our spin class.\n\nIt’s led by a dedicated spin instructor, which gives the sessions a more specialist and focused feel.",
           [
             { label: "Explore Memberships", message: "Tell me about memberships" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -441,7 +461,8 @@ app.post("/chat", async (req, res) => {
           "Legs, Bums & Tums focuses on lower body and core work.\n\nThe session changes each time, so workouts stay varied and engaging.",
           [
             { label: "Explore Memberships", message: "Tell me about memberships" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -450,10 +471,11 @@ app.post("/chat", async (req, res) => {
     if (isClassIntent(lowerMessage)) {
       return res.status(200).json(
         createResponse(
-          "We currently offer these coach-led classes at Body Mechanics:\n\n- Sculpt, which is strength and conditioning focused\n- Burn, which is cardio focused and changes each day\n- Hybrid, which combines weights and cardio in a Hyrox-style format\n- Crank, which is our spin class led by a dedicated spin instructor\n- Legs, Bums & Tums, which focuses on lower body and core and changes each session\n\nIf you mainly want classes, Apex is the classes membership. If you want classes and gym access, Olympic is the better fit.",
+          "We currently offer these coach-led classes at Body Mechanics:\n\n- Sculpt, which is strength and conditioning focused\n- Burn, which is cardio focused and changes each day\n- Hybrid, which combines weights and cardio in a Hyrox-style format\n- Crank, which is our spin class led by a dedicated spin instructor\n- Legs, Bums & Tums, which focuses on lower body and core and changes each session\n\nIf you mainly want classes, Apex is the classes membership. If you want classes and gym access, Olympic is the better fit.\n\nMembers use the BM Portal app to book classes and check in. It’s available on both the App Store and Google Play.",
           [
-            { label: "Explore Memberships", message: "Tell me about memberships" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup },
+            { label: "Explore Memberships", message: "Tell me about memberships" }
           ]
         )
       );
@@ -462,9 +484,10 @@ app.post("/chat", async (req, res) => {
     if (isMembershipChoiceIntent(lowerMessage)) {
       return res.status(200).json(
         createResponse(
-          "It depends on how you prefer to train.\n\n- Titan is best if you mainly want open gym access\n- Apex is best if you mainly want coach-led classes\n- Olympic is best if you want both gym access and classes\n\nIf you’re unsure, the simplest way to experience Body Mechanics is the free 7-day trial.",
+          "It depends on how you prefer to train.\n\n- Titan is best if you mainly want open gym access\n- Apex is best if you mainly want coach-led classes\n- Olympic is best if you want both gym access and classes\n\nIf you want to explore Body Mechanics first, the free 7-day trial is the best place to start:\n" + LINKS.freeTrial + "\n\nIf you already know you want to join, you can sign up directly here:\n" + LINKS.signup + "\n\nOnce you're set up, the BM Portal app is how members book classes and check in. It’s available on both the App Store and Google Play.",
           [
             { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup },
             { label: "Tell me about classes", message: "Tell me about your classes" }
           ]
         )
@@ -474,9 +497,14 @@ app.post("/chat", async (req, res) => {
     if (isGymIntent(lowerMessage)) {
       return res.status(200).json(
         createResponse(
-          "The best way to experience Body Mechanics is our free 7-day trial.\n\nWe offer:\n- Titan for open gym access\n- Apex for classes\n- Olympic for gym and classes\n\nYou can start your free trial here:\n" + LINKS.freeTrial,
+          "There are two good ways to get started with Body Mechanics.\n\nIf you want to experience the gym first, the best option is the free 7-day trial:\n" +
+            LINKS.freeTrial +
+            "\n\nIf you already know you want to join, you can sign up directly here:\n" +
+            LINKS.signup +
+            "\n\nOnce you're set up, the BM Portal app is the best way to book classes and check in at the facility. It’s available on both the App Store and Google Play.",
           [
             { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup },
             { label: "Explore Memberships", message: "Tell me about memberships" }
           ]
         )
@@ -486,10 +514,14 @@ app.post("/chat", async (req, res) => {
     if (isBeginnerIntent(lowerMessage)) {
       return res.status(200).json(
         createResponse(
-          "That’s completely normal.\n\nBody Mechanics is designed to feel welcoming, supportive, and expert-led, so people can start with confidence. A lot of new members begin with the free 7-day trial so they can explore the space and find the right fit.",
+          "That’s completely normal.\n\nBody Mechanics is designed to feel welcoming, supportive, and expert-led, so people can start with confidence.\n\nIf you want to explore the facility first, the free 7-day trial is the best place to start:\n" +
+            LINKS.freeTrial +
+            "\n\nIf you already know you want to join, you can sign up directly here:\n" +
+            LINKS.signup +
+            "\n\nOnce you're set up, the BM Portal app is how members book classes and check in at the facility. It’s available on both the App Store and Google Play.",
           [
             { label: "Start Free Trial", url: LINKS.freeTrial },
-            { label: "Explore Memberships", message: "Tell me about memberships" }
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -523,7 +555,8 @@ app.post("/chat", async (req, res) => {
           "Burn or Hybrid would usually be the best place to start.\n\nBurn is our cardio-focused class and changes each day, while Hybrid combines weights and conditioning in a Hyrox-style format.\n\nIf you want class access, Apex is the classes membership. If you also want gym access, Olympic would be the better fit.",
           [
             { label: "Tell me about classes", message: "Tell me about your classes" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
@@ -535,13 +568,20 @@ app.post("/chat", async (req, res) => {
           "Sculpt would usually be the best place to start if your main goal is getting stronger.\n\nIt’s our strength and conditioning class and runs in structured 4-week blocks so members can progress properly.",
           [
             { label: "What is Sculpt?", message: "What is Sculpt?" },
-            { label: "Start Free Trial", url: LINKS.freeTrial }
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
           ]
         )
       );
     }
 
-    // Page-aware nudges
+    if (isAppIntent(lowerMessage)) {
+      return res.status(200).json(
+        createResponse(
+          "Members use the BM Portal app to book classes and check in at the facility.\n\nIt’s available on both the App Store and Google Play."
+        )
+      );
+    }
 
     if (context === "therapy" && includesAny(lowerMessage, ["help", "what do you do", "tell me more"])) {
       return res.status(200).json(
@@ -555,13 +595,14 @@ app.post("/chat", async (req, res) => {
     if (context === "gym" && includesAny(lowerMessage, ["help", "what do i do", "how do i start"])) {
       return res.status(200).json(
         createResponse(
-          "The simplest way to get started is with the free 7-day trial.\n\nThat gives you a chance to experience Body Mechanics properly and find the right membership path for how you want to train.\n\nStart here:\n" + LINKS.freeTrial,
-          [{ label: "Start Free Trial", url: LINKS.freeTrial }]
+          "The simplest way to get started is with the free 7-day trial.\n\nThat gives you a chance to experience Body Mechanics properly and find the right membership path for how you want to train.\n\nIf you're ready to commit straight away, you can also sign up directly:\n" + LINKS.signup,
+          [
+            { label: "Start Free Trial", url: LINKS.freeTrial },
+            { label: "Sign Up Now", url: LINKS.signup }
+          ]
         )
       );
     }
-
-    // AI fallback for broader questions
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
@@ -571,7 +612,8 @@ app.post("/chat", async (req, res) => {
         ...safeHistory,
         {
           role: "system",
-          content: `Current page context: ${context}. If relevant, use these links. Free trial: ${LINKS.freeTrial}. Treatment booking: ${LINKS.booking}.`
+          content:
+            `Current page context: ${context}. Use these links when relevant. Free trial: ${LINKS.freeTrial}. Signup: ${LINKS.signup}. Treatment booking: ${LINKS.booking}.`
         },
         { role: "user", content: message.trim() }
       ]
@@ -586,7 +628,7 @@ app.post("/chat", async (req, res) => {
     if (context === "gym") {
       ctas = [
         { label: "Start Free Trial", url: LINKS.freeTrial },
-        { label: "Explore Memberships", message: "Tell me about memberships" }
+        { label: "Sign Up Now", url: LINKS.signup }
       ];
     } else if (context === "therapy") {
       ctas = [
@@ -595,6 +637,7 @@ app.post("/chat", async (req, res) => {
     } else {
       ctas = [
         { label: "Start Free Trial", url: LINKS.freeTrial },
+        { label: "Sign Up Now", url: LINKS.signup },
         { label: "Book Sports Therapy", url: LINKS.booking }
       ];
     }
@@ -607,6 +650,7 @@ app.post("/chat", async (req, res) => {
         "Sorry, I’m having trouble right now. Please contact the team directly.",
         [
           { label: "Start Free Trial", url: LINKS.freeTrial },
+          { label: "Sign Up Now", url: LINKS.signup },
           { label: "Book Sports Therapy", url: LINKS.booking }
         ]
       )
